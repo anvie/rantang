@@ -106,11 +106,11 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRespo
     match save_result {
         Ok(_) => {
             // calculate hash and rename it accordingly
-            let new_path = move_by_hash(&tmp_filepath.unwrap())?;
+            let hash = move_by_hash(&tmp_filepath.unwrap())?;
 
             Ok(HttpResponse::Ok().json(json!({
                 "nonce": nonce,
-                "url": new_path
+                "sha1": hash
             })))
         }
         Err(e) => Err(actix_web::error::InternalError::new(
@@ -141,7 +141,7 @@ fn move_by_hash(src_path: &str) -> Result<String, io::Error> {
 
     std::fs::rename(src_path, new_path.clone())?;
 
-    Ok(new_path)
+    Ok(hash)
 }
 
 async fn get_nonce() -> Result<HttpResponse, io::Error> {

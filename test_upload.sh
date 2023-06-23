@@ -7,8 +7,8 @@
 timestamp=$(date +%s)
 NONCE=$((timestamp / 30))
 
-echo "Key: $SECRET_KEY"
-echo "NONCE: $NONCE"
+# echo "Key: $SECRET_KEY"
+# echo "NONCE: $NONCE"
 
 SIGNATURE=`echo -n "$NONCE" | openssl dgst -sha1 -hmac "$SECRET_KEY"`
 
