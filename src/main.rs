@@ -72,7 +72,7 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRespo
     let nonce_from_client = get_header_value("X-Nonce", &req)?;
     let nonce = format!("{}", nonce::nonce());
 
-    debug!("NONCE: client: {}, server: {}", nonce_from_client, nonce);
+    debug!("NONCE: client <> server - {} <> {}", nonce_from_client, nonce);
 
     if !crypto::verify_signature(secret_key.as_bytes(), nonce.as_bytes(), signature) {
         return Err(error::ErrorBadRequest(
