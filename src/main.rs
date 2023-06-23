@@ -62,6 +62,21 @@ pub fn get_header_value<'a>(key: &str, req: &'a HttpRequest) -> Result<&'a str, 
     Ok(value)
 }
 
+fn verify_signature_nonce_range(secret_key: &str, nonce: &[u64], signature: &str) -> bool {
+    let mut result = false;
+    for n in nonce {
+        if crypto::verify_signature(
+            secret_key.as_bytes(),
+            (*n).to_string().as_bytes(),
+            signature,
+        ) {
+            result = true;
+            break;
+        }
+    }
+    result
+}
+
 async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpResponse, Error> {
     let mut save_result: Result<(), io::Error> = Ok(());
     let max_size = 20 * 1024 * 1024; // 20mb
@@ -71,14 +86,16 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRespo
 
     let signature = get_header_value("X-Signature", &req)?;
     let nonce_from_client = get_header_value("X-Nonce", &req)?;
-    let nonce = format!("{}", nonce::nonce());
+    let nonce = nonce::nonce();
 
     debug!(
         "NONCE: client <> server - {} <> {}",
         nonce_from_client, nonce
     );
 
-    if !crypto::verify_signature(secret_key.as_bytes(), nonce.as_bytes(), signature) {
+    let nonce_range: [u64; 3] = [nonce - 1, nonce, nonce + 1];
+
+    if !verify_signature_nonce_range(&secret_key, &nonce_range, signature) {
         return Err(error::ErrorBadRequest(
             "Invalid signature. Please check your secret key.",
         ));

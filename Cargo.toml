@@ -1,6 +1,6 @@
 [package]
 name = "rantang"
-version = "0.0.9"
+version = "0.0.10"
 authors = ["Robin Syihab <r@nu.id>"]
 edition = "2018"
 
