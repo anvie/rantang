@@ -81,7 +81,9 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRespo
     if let Ok(Some(mut field)) = payload.try_next().await {
         debug!("field: {:?}", &field);
         let content_type = field.content_disposition();
-        let filename = content_type.get_filename().unwrap();
+        let filename = content_type.get_filename().ok_or_else(|| 
+            error::ErrorBadRequest("No filename in content disposition")
+        )?;
 
         debug!("filename: {}", filename);
 
@@ -89,7 +91,7 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRespo
         let tmp_filepath_internal = format!("{}/tmp-{}-{}", out_dir, a_nonce, filename);
         debug!("tmp_filepath_internal: {}", tmp_filepath_internal);
 
-        let mut f = File::create(&tmp_filepath_internal).unwrap();
+        let mut f = File::create(&tmp_filepath_internal)?;
 
         tmp_filepath = Some(tmp_filepath_internal);
 
