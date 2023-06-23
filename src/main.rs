@@ -85,6 +85,7 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRespo
     }
 
     let mut tmp_filepath: Option<String> = None;
+    let mut extension: Option<String> = None;
 
     if let Ok(Some(mut field)) = payload.try_next().await {
         debug!("field: {:?}", &field);
@@ -124,7 +125,12 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRespo
             if format.is_none() {
                 format = Some(image::guess_format(file_head).map_err(img_error)?);
                 match format {
-                    Some(image::ImageFormat::Png) | Some(image::ImageFormat::Jpeg) => (),
+                    Some(image::ImageFormat::Png) => {
+                        extension = Some("png".to_string());
+                    }
+                    Some(image::ImageFormat::Jpeg) => {
+                        extension = Some("jpg".to_string());
+                    }
                     _ => {
                         save_result = Err(io::Error::new(
                             io::ErrorKind::InvalidData,
@@ -144,7 +150,8 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRespo
 
                 Ok(HttpResponse::Ok().json(json!({
                     "nonce": nonce,
-                    "sha1": hash
+                    "sha1": hash,
+                    "extension": extension.unwrap_or("jpg".to_string())
                 })))
             } else {
                 Err(error::ErrorBadRequest("No file uploaded"))
