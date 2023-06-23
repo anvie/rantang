@@ -1,3 +1,18 @@
+/// MIT License
+///
+/// Copyright (c) 2023 Robin Syihab <r@nu.id>
+///
+/// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
+/// to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+/// and/or sell copies of the Software and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+///
+/// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+///
+/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+/// OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+/// BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
+/// OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 /// Project Rantang
 ///
 /// Author: Robin Syihab <r@nu.id>
@@ -30,12 +45,19 @@ fn img_error(e: ImageError) -> error::Error {
     error::ErrorBadRequest("Invalid image")
 }
 
-fn get_header_value<'a>(key: &str, req: &'a HttpRequest) -> Result<&'a str, Error> {
-    req.headers()
+pub fn get_header_value<'a>(key: &str, req: &'a HttpRequest) -> Result<&'a str, Error> {
+    let value = req
+        .headers()
         .get(key)
         .ok_or_else(|| error::ErrorBadRequest(format!("No {} header", key)))?
         .to_str()
-        .map_err(to_str_err)
+        .map_err(to_str_err)?;
+
+    if value.is_empty() {
+        return Err(error::ErrorBadRequest(format!("{} header is empty", key)));
+    }
+
+    Ok(value)
 }
 
 async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpResponse, Error> {
