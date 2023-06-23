@@ -138,12 +138,16 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRespo
     match save_result {
         Ok(_) => {
             // calculate hash and rename it accordingly
-            let hash = move_by_hash(&tmp_filepath.unwrap())?;
+            if let Some(tmp_filepath) = tmp_filepath {
+                let hash = move_by_hash(&tmp_filepath)?;
 
-            Ok(HttpResponse::Ok().json(json!({
-                "nonce": nonce,
-                "sha1": hash
-            })))
+                Ok(HttpResponse::Ok().json(json!({
+                    "nonce": nonce,
+                    "sha1": hash
+                })))
+            } else {
+                Err(error::ErrorBadRequest("No file uploaded"))
+            }
         }
         Err(e) => Err(actix_web::error::InternalError::new(
             e,
