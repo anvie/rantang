@@ -1322,7 +1322,7 @@ dependencies = [
 
 [[package]]
 name = "rantang"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "actix-cors",
  "actix-multipart",
