@@ -199,8 +199,7 @@ async fn main() -> std::io::Result<()> {
         let cors = Cors::default()
             .allow_any_origin()
             .allow_any_header()
-            .allow_any_method()
-            .supports_credentials();
+            .allow_any_method();
 
         App::new()
             .wrap(cors)
