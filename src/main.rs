@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 /// MIT License
 ///
 /// Copyright (c) 2023 Robin Syihab <r@nu.id>
@@ -29,7 +30,6 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{env, io};
-use actix_cors::Cors;
 
 #[cfg(test)]
 mod tests;
@@ -72,7 +72,10 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRespo
     let nonce_from_client = get_header_value("X-Nonce", &req)?;
     let nonce = format!("{}", nonce::nonce());
 
-    debug!("NONCE: client <> server - {} <> {}", nonce_from_client, nonce);
+    debug!(
+        "NONCE: client <> server - {} <> {}",
+        nonce_from_client, nonce
+    );
 
     if !crypto::verify_signature(secret_key.as_bytes(), nonce.as_bytes(), signature) {
         return Err(error::ErrorBadRequest(
@@ -85,9 +88,9 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRespo
     if let Ok(Some(mut field)) = payload.try_next().await {
         debug!("field: {:?}", &field);
         let content_type = field.content_disposition();
-        let filename = content_type.get_filename().ok_or_else(|| 
-            error::ErrorBadRequest("No filename in content disposition")
-        )?;
+        let filename = content_type
+            .get_filename()
+            .ok_or_else(|| error::ErrorBadRequest("No filename in content disposition"))?;
 
         debug!("filename: {}", filename);
 
@@ -189,7 +192,11 @@ async fn main() -> std::io::Result<()> {
         .expect("Failed to create IMGSRC_DIR");
 
     let _server = HttpServer::new(|| {
-        let cors = Cors::default().allow_any_origin().send_wildcard();
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_header()
+            .allow_any_method()
+            .supports_credentials();
 
         App::new()
             .wrap(cors)
