@@ -29,6 +29,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{env, io};
+use actix_cors::Cors;
 
 #[cfg(test)]
 mod tests;
@@ -188,7 +189,10 @@ async fn main() -> std::io::Result<()> {
         .expect("Failed to create IMGSRC_DIR");
 
     let _server = HttpServer::new(|| {
+        let cors = Cors::default().allow_any_origin().send_wildcard();
+
         App::new()
+            .wrap(cors)
             .wrap(middleware::Logger::default())
             .route("/get_nonce", web::get().to(get_nonce))
             .route("/image", web::post().to(save_file))
