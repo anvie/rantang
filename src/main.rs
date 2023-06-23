@@ -21,6 +21,7 @@ use actix_cors::Cors;
 use actix_multipart::Multipart;
 use actix_web::http::header::ToStrError;
 use actix_web::{error, middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use anyhow::Result;
 use dotenvy::dotenv;
 use futures::{StreamExt, TryStreamExt};
 use image::{ImageError, ImageFormat};
@@ -186,7 +187,7 @@ async fn get_nonce() -> Result<HttpResponse, io::Error> {
 }
 
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<()> {
     dotenv().expect(".env not found.");
     env_logger::init();
 
@@ -195,21 +196,36 @@ async fn main() -> std::io::Result<()> {
     std::fs::create_dir_all(env::var("IMGSRC_DIR").expect("IMGSRC_DIR not set"))
         .expect("Failed to create IMGSRC_DIR");
 
-    let _server = HttpServer::new(|| {
-        let cors = Cors::default()
-            .allow_any_origin()
-            .allow_any_header()
-            .allow_any_method();
+    let cors_allow_all =
+        env::var("CORS_ALLOW_ALL").ok().as_ref().map(|a| a.as_str()) == Some("true");
 
-        App::new()
-            .wrap(cors)
-            .wrap(middleware::Logger::default())
-            .route("/get_nonce", web::get().to(get_nonce))
-            .route("/image", web::post().to(save_file))
-    })
-    .bind("127.0.0.1:8080")?
-    .run()
-    .await;
+    if cors_allow_all {
+        debug!("CORS_ALLOW_ALL is set to true. Allowing all origins.");
+        HttpServer::new(|| {
+            let cors = Cors::default()
+                .allow_any_origin()
+                .allow_any_header()
+                .allow_any_method();
+            App::new()
+                .wrap(cors)
+                .wrap(middleware::Logger::default())
+                .route("/get_nonce", web::get().to(get_nonce))
+                .route("/image", web::post().to(save_file))
+        })
+        .bind("127.0.0.1:8080")?
+        .run()
+        .await?;
+    } else {
+        HttpServer::new(|| {
+            App::new()
+                .wrap(middleware::Logger::default())
+                .route("/get_nonce", web::get().to(get_nonce))
+                .route("/image", web::post().to(save_file))
+        })
+        .bind("127.0.0.1:8080")?
+        .run()
+        .await?;
+    }
 
     Ok(())
 }
