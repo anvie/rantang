@@ -1,0 +1,63 @@
+# This file is a YAML-formatted configuration file for GitHub Actions
+# For more information about how to create and use GitHub Actions, see
+# https://help.github.com/en/articles/about-github-actions
+
+name: Build Rantang and deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set env
+      run: |
+        chmod +x ./.github/setenv.sh
+        ./.github/setenv.sh >> $GITHUB_ENV
+
+    - name: Install rust toolchain
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: stable
+
+    - name: Rust version check
+      shell: bash
+      run: |
+        cargo +stable --version
+        rustc +stable --version
+
+    - name: Build
+      shell: bash
+      run: cargo build --release
+
+    - name: Install SSH Key
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        known_hosts: unnecessary
+
+    - name: Adding Known Hosts
+      run: ssh-keyscan -p ${{ secrets.SSH_PORT}} -H ${{ secrets.SSH_HOST }}  >> ~/.ssh/known_hosts
+
+    - name: Deploy with rsync
+      run: rsync -avzrhcP --chown www:www -e "ssh -p ${{ secrets.SSH_PORT }}" ./target/release/rantang ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${{ env.BIN_OUTPUT }}
+
+    - name: Add marker for restart by systemd
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        script: |
+          rm -f /home/www/rantang/rantang
+          ln -s ${{ env.BIN_OUTPUT }} /home/www/rantang/rantang
+          touch /home/www/rantang/restart
+          echo ${{ env.VERSION }} > /home/www/rantang/latest-version.txt
+          echo "Restart marker added"

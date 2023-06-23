@@ -1,0 +1,22 @@
+[package]
+name = "rantang"
+version = "0.0.1"
+authors = ["Robin Syihab <r@nu.id>"]
+edition = "2018"
+
+[dependencies]
+log = "0.4.6"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+env_logger = "0.10.0"
+
+actix-web = "4.3.1"
+actix-multipart = "0.6.0"
+actix-rt = "2.8.0"
+image = "0.24.6"
+futures = "0.3.15"
+dotenvy = "0.15.7"
+hmac = "0.12.1"
+sha1 = "0.10.5"
+hex = "0.4.3"
+
