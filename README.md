@@ -1,7 +1,7 @@
 Rantang
 ===============
 
-Rantang is a simple image upload server with signature verification built using Rust and the Actix web. This software allows an authenticated user to upload images to the server with a digital signature.
+Rantang is a simple image upload server with signature verification built using Rust with Actix. This software allows an authenticated user to upload images to the server with a digital signature.
 
 ## Installation
 
