@@ -24,7 +24,7 @@ use actix_web::{
 };
 use anyhow::Result;
 use dotenvy::dotenv;
-use error::{to_str_err, MyError};
+use error::{to_str_err, ApiResult, MyError};
 use futures::{StreamExt, TryStreamExt};
 use image::ImageFormat;
 use log::debug;
@@ -73,7 +73,7 @@ fn verify_signature_nonce_range(secret_key: &str, nonce: &[u64], signature: &str
     result
 }
 
-async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpResponse, MyError> {
+async fn save_file(req: HttpRequest, mut payload: Multipart) -> ApiResult {
     let mut save_result: Result<(), io::Error> = Ok(());
     let max_size = 20 * 1024 * 1024; // 20mb
 
@@ -198,20 +198,10 @@ fn move_by_hash(src_path: &str) -> Result<String, io::Error> {
     Ok(hash)
 }
 
-async fn get_nonce() -> Result<HttpResponse, io::Error> {
+async fn get_nonce() -> ApiResult {
     let a_nonce = nonce::nonce();
     Ok(HttpResponse::Ok().body(a_nonce.to_string()))
 }
-
-// fn handle_bad_request<B>(
-//     mut res: dev::ServiceResponse<B>,
-// ) -> actix_web::Result<ErrorHandlerResponse<B>> {
-//     // res.response_mut().headers_mut().insert(
-//     //     header::CONTENT_TYPE,
-//     //     header::HeaderValue::from_static("Bad Request Error"),
-//     // );
-//     Ok(ErrorHandlerResponse::Response(res.map_into_left_body()))
-// }
 
 #[actix_web::main]
 async fn main() -> Result<()> {
@@ -235,7 +225,6 @@ async fn main() -> Result<()> {
                 .allow_any_method();
             App::new()
                 .wrap(cors)
-                // .wrap(ErrorHandlers::new().handler(StatusCode::BAD_REQUEST, handle_bad_request))
                 .wrap(middleware::Logger::default())
                 .route("/get_nonce", web::get().to(get_nonce))
                 .route("/image", web::post().to(save_file))
@@ -246,7 +235,6 @@ async fn main() -> Result<()> {
     } else {
         HttpServer::new(|| {
             App::new()
-                // .wrap(ErrorHandlers::new().handler(StatusCode::BAD_REQUEST, handle_bad_request))
                 .wrap(middleware::Logger::default())
                 .route("/get_nonce", web::get().to(get_nonce))
                 .route("/image", web::post().to(save_file))

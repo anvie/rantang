@@ -11,6 +11,8 @@ use std::io;
 #[derive(Debug)]
 pub struct MyError(AnyhowError);
 
+pub type ApiResult = Result<HttpResponse, MyError>;
+
 impl std::fmt::Display for MyError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.0)
