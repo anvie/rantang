@@ -19,12 +19,14 @@ use actix_cors::Cors;
 /// Author: Robin Syihab <r@nu.id>
 ///
 use actix_multipart::Multipart;
-use actix_web::http::header::ToStrError;
-use actix_web::{error, middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{
+    error as actix_error, middleware, web, App, HttpRequest, HttpResponse, HttpServer,
+};
 use anyhow::Result;
 use dotenvy::dotenv;
+use error::{to_str_err, MyError};
 use futures::{StreamExt, TryStreamExt};
-use image::{ImageError, ImageFormat};
+use image::ImageFormat;
 use log::debug;
 use serde_json::json;
 use std::fs::File;
@@ -32,31 +34,25 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{env, io};
 
+use crate::error::img_error;
+
+mod error;
 #[cfg(test)]
 mod tests;
 
 mod crypto;
 mod nonce;
 
-fn to_str_err(_: ToStrError) -> error::Error {
-    error::ErrorBadRequest("Invalid UTF-8 in header value")
-}
-
-fn img_error(e: ImageError) -> error::Error {
-    debug!("e: {}", e);
-    error::ErrorBadRequest("Invalid image")
-}
-
-pub fn get_header_value<'a>(key: &str, req: &'a HttpRequest) -> Result<&'a str, Error> {
+pub fn get_header_value<'a>(key: &str, req: &'a HttpRequest) -> Result<&'a str, MyError> {
     let value = req
         .headers()
         .get(key)
-        .ok_or_else(|| error::ErrorBadRequest(format!("No {} header", key)))?
+        .ok_or_else(|| actix_error::ErrorBadRequest(format!("No {} header", key)))?
         .to_str()
         .map_err(to_str_err)?;
 
     if value.is_empty() {
-        return Err(error::ErrorBadRequest(format!("{} header is empty", key)));
+        return Err(actix_error::ErrorBadRequest(format!("{} header is empty", key)).into());
     }
 
     Ok(value)
@@ -77,7 +73,7 @@ fn verify_signature_nonce_range(secret_key: &str, nonce: &[u64], signature: &str
     result
 }
 
-async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpResponse, Error> {
+async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpResponse, MyError> {
     let mut save_result: Result<(), io::Error> = Ok(());
     let max_size = 20 * 1024 * 1024; // 20mb
 
@@ -96,9 +92,7 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRespo
     let nonce_range: [u64; 3] = [nonce - 1, nonce, nonce + 1];
 
     if !verify_signature_nonce_range(&secret_key, &nonce_range, signature) {
-        return Err(error::ErrorBadRequest(
-            "Invalid signature. Please check your secret key.",
-        ));
+        return Err(actix_error::ErrorBadRequest("Invalid signature.").into());
     }
 
     let mut tmp_filepath: Option<String> = None;
@@ -109,7 +103,7 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRespo
         let content_type = field.content_disposition();
         let filename = content_type
             .get_filename()
-            .ok_or_else(|| error::ErrorBadRequest("No filename in content disposition"))?;
+            .ok_or_else(|| actix_error::ErrorBadRequest("No filename in content disposition"))?;
 
         debug!("filename: {}", filename);
 
@@ -171,14 +165,13 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRespo
                     "extension": extension.unwrap_or("jpg".to_string())
                 })))
             } else {
-                Err(error::ErrorBadRequest("No file uploaded"))
+                Err(actix_error::ErrorBadRequest("No file uploaded").into())
             }
         }
         Err(e) => Err(actix_web::error::InternalError::new(
             e,
             actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
-        )
-        .into()),
+        ))?,
     }
 }
 
@@ -210,6 +203,16 @@ async fn get_nonce() -> Result<HttpResponse, io::Error> {
     Ok(HttpResponse::Ok().body(a_nonce.to_string()))
 }
 
+// fn handle_bad_request<B>(
+//     mut res: dev::ServiceResponse<B>,
+// ) -> actix_web::Result<ErrorHandlerResponse<B>> {
+//     // res.response_mut().headers_mut().insert(
+//     //     header::CONTENT_TYPE,
+//     //     header::HeaderValue::from_static("Bad Request Error"),
+//     // );
+//     Ok(ErrorHandlerResponse::Response(res.map_into_left_body()))
+// }
+
 #[actix_web::main]
 async fn main() -> Result<()> {
     dotenv().expect(".env not found.");
@@ -232,6 +235,7 @@ async fn main() -> Result<()> {
                 .allow_any_method();
             App::new()
                 .wrap(cors)
+                // .wrap(ErrorHandlers::new().handler(StatusCode::BAD_REQUEST, handle_bad_request))
                 .wrap(middleware::Logger::default())
                 .route("/get_nonce", web::get().to(get_nonce))
                 .route("/image", web::post().to(save_file))
@@ -242,6 +246,7 @@ async fn main() -> Result<()> {
     } else {
         HttpServer::new(|| {
             App::new()
+                // .wrap(ErrorHandlers::new().handler(StatusCode::BAD_REQUEST, handle_bad_request))
                 .wrap(middleware::Logger::default())
                 .route("/get_nonce", web::get().to(get_nonce))
                 .route("/image", web::post().to(save_file))

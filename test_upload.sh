@@ -14,6 +14,6 @@ SIGNATURE=`echo -n "$NONCE" | openssl dgst -sha1 -hmac "$SECRET_KEY"`
 
 curl -X POST http://localhost:8080/image \
     -H "Content-Type: multipart/form-data" \
-    -H "X-Signature: $SIGNATURE" \
+    -H "X-Signature: AB$SIGNATURE" \
     -H "X-Nonce: $NONCE" \
     -F file=@./IMG_9211.jpg
