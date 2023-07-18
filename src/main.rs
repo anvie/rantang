@@ -1,5 +1,5 @@
 use actix_cors::Cors;
-use actix_error::{ErrorBadGateway, ErrorBadRequest};
+use actix_error::ErrorBadRequest;
 /// MIT License
 ///
 /// Copyright (c) 2023 Robin Syihab <r@nu.id>
@@ -28,7 +28,7 @@ use dotenvy::dotenv;
 use error::{to_str_err, ApiResult, MyError};
 use futures::{StreamExt, TryStreamExt};
 use image::ImageFormat;
-use log::{debug, info};
+use log::debug;
 use serde_json::json;
 use std::fs::File;
 use std::io::Write;
@@ -143,7 +143,9 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> ApiResult {
         out_dir = env::var(format!("OUT_DIR_{}", dir_index))
             .map_err(|_| ErrorBadRequest(format!("Unknown dir index: {}", dir_index)))?;
         Some(dir_index)
-    }else { None };
+    } else {
+        None
+    };
 
     let mut tmp_filepath: Option<String> = None;
     let mut extension: Option<String> = None;
@@ -279,14 +281,21 @@ async fn main() -> Result<()> {
 
     println!("Welcome to Rantang version {}", env!("CARGO_PKG_VERSION"));
 
-    std::fs::create_dir_all(env::var("OUT_DIR").expect("OUT_DIR not set"))
-        .expect("Failed to create OUT_DIR");
+    let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
+
+    // check if exists and create if not
+    if !Path::new(&out_dir).exists() {
+        std::fs::create_dir_all(&out_dir).expect("Failed to create OUT_DIR");
+    }
 
     let mut out_dir_count = 0;
     for (key, value) in env::vars() {
         if key.starts_with("OUT_DIR_") {
             let dir = value;
-            std::fs::create_dir_all(&dir).expect("Failed to create OUT_DIR");
+            // check if exists and create if not
+            if !Path::new(&dir).exists() {
+                std::fs::create_dir_all(&dir).expect(&format!("Failed to create {}", &dir));
+            }
             out_dir_count += 1;
             debug!("out dir #{}: {}", out_dir_count, dir);
         }
