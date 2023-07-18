@@ -67,6 +67,30 @@ Content-Type: application/json
 
 Please take a look at the `test_upload.sh` script for example usage in bash.
 
+### Custom out dir
+
+You can specify the additional output directory by setting the `OUT_DIR_[index]` environment variable. 
+Where `[index]` is the index of the output directory, can be any number or string.
+
+Example:
+
+```
+OUT_DIR_2=/home/user/images_2
+```
+
+To upload to specific output directory defined in `OUT_DIR_2` environment variable, you can add `X-Dir-Index` header with value `2` to the request, for example:
+
+```bash
+curl -X POST http://localhost:8080/image \
+    -H "Content-Type: multipart/form-data" \
+    -H "X-Signature: $SIGNATURE" \
+    -H "X-Nonce: $NONCE" \
+    -H "X-Dir-Index: 2" \
+    -F file=@./IMG_9211.jpg
+```
+
+Then the uploaded image will be saved to `/home/user/images_2` directory.
+
 ## License
 
 Rantang is licensed under the MIT License. See the `LICENSE` file for more information.
