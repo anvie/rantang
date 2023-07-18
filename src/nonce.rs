@@ -14,6 +14,16 @@
 /// OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 use std::time::SystemTime;
 
+/// Returns a nonce value for using in authentication processes.
+///
+/// Creates a nonce value by dividing the current Unix timestamp (in seconds) by 30.
+///
+/// # Examples
+///
+/// ```
+/// let nonce_value = nonce();
+/// assert!(nonce_value > 0);
+/// ```
 pub fn nonce() -> u64 {
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)

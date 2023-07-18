@@ -43,7 +43,28 @@ mod tests;
 mod crypto;
 mod nonce;
 
-pub fn get_header_value<'a>(key: &str, req: &'a HttpRequest) -> Result<&'a str, MyError> {
+/// Gets the header value from an [`HttpRequest`](HttpRequest) object.
+///
+/// # Arguments
+///
+/// * `key` - A string slice with the name of the header.
+/// * `req` - An [`HttpRequest`](HttpRequest) reference.
+///
+/// # Errors
+///
+/// If the `key` is not present in the `req`'s headers, or if the value of the
+/// header
+/// is an empty string, an [`ErrorBadRequest`](ErrorBadRequest) is returned.
+///
+/// # Examples
+///
+/// ```
+/// let req = HttpRequest::new(Method::GET, "localhost".parse().unwrap(),
+/// false);
+/// let res = get_header_value("key", &req);
+/// assert!(res.is_err());
+/// ```
+pub(crate) fn get_header_value<'a>(key: &str, req: &'a HttpRequest) -> Result<&'a str, MyError> {
     let value = req
         .headers()
         .get(key)
@@ -58,6 +79,22 @@ pub fn get_header_value<'a>(key: &str, req: &'a HttpRequest) -> Result<&'a str, 
     Ok(value)
 }
 
+/// Verifies a signature against a range of nonces using a secret key.
+///
+/// # Arguments
+///
+/// * `secret_key` - A string slice that holds the secret key.
+/// * `nonce` - A slice of 64 bit unsigned integers.
+/// * `signature` - A string slice that holds the signature to verify.
+///
+/// # Examples
+///
+/// ```
+/// let secret_key = "mysecretkey";
+/// let nonce = [1, 2, 3];
+/// let signature = "signhere";
+/// assert!(verify_signature_nonce_range(secret_key, nonce, signature));
+/// ```
 fn verify_signature_nonce_range(secret_key: &str, nonce: &[u64], signature: &str) -> bool {
     let mut result = false;
     for n in nonce {
@@ -77,7 +114,7 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> ApiResult {
     let mut save_result: Result<(), io::Error> = Ok(());
     let max_size = 20 * 1024 * 1024; // 20mb
 
-    let out_dir = env::var("IMGSRC_DIR").expect("IMGSRC_DIR not set");
+    let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
     let secret_key = env::var("SECRET_KEY").expect("SECRET_KEY not set");
 
     let signature = get_header_value("X-Signature", &req)?;
@@ -175,6 +212,21 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> ApiResult {
     }
 }
 
+/// Moves the given file, renaming it with its SHA1 hash as a file name.
+///
+/// # Arguments
+///
+/// * `src_path` - A string slice that holds the path to the file.
+///
+/// # Returns
+///
+/// A `Result` containing a `String` with the file's SHA1 hash.
+///
+/// # Examples
+///
+/// ```
+/// let hash = move_by_hash("my_image.jpg").unwrap();
+/// ```
 fn move_by_hash(src_path: &str) -> Result<String, io::Error> {
     let mut path = PathBuf::from(src_path);
 
@@ -210,8 +262,8 @@ async fn main() -> Result<()> {
 
     println!("Welcome to Rantang version {}", env!("CARGO_PKG_VERSION"));
 
-    std::fs::create_dir_all(env::var("IMGSRC_DIR").expect("IMGSRC_DIR not set"))
-        .expect("Failed to create IMGSRC_DIR");
+    std::fs::create_dir_all(env::var("OUT_DIR").expect("OUT_DIR not set"))
+        .expect("Failed to create OUT_DIR");
 
     let cors_allow_all =
         env::var("CORS_ALLOW_ALL").ok().as_ref().map(|a| a.as_str()) == Some("true");
