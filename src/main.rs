@@ -149,6 +149,7 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> ApiResult {
 
     let mut tmp_filepath: Option<String> = None;
     let mut extension: Option<String> = None;
+    let mut mime_type: Option<mime_guess::Mime> = None;
 
     if let Ok(Some(mut field)) = payload.try_next().await {
         debug!("field: {:?}", &field);
@@ -164,8 +165,13 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> ApiResult {
             return Err(ErrorBadRequest("Invalid filename.").into());
         }
 
+        let filename = filename.to_owned();
+
+        mime_type = Some(mime_guess::from_path(&filename).first_or_octet_stream());
+        debug!("mime_type: {:?}", mime_type);
+
         let a_nonce = nonce::nonce();
-        let tmp_filepath_internal = format!("{}/tmp-{}-{}", out_dir, a_nonce, filename);
+        let tmp_filepath_internal = format!("{}/tmp-{}-{}", out_dir, a_nonce, &filename);
         debug!("tmp_filepath_internal: {}", tmp_filepath_internal);
 
         let mut f = File::create(&tmp_filepath_internal)?;
@@ -174,7 +180,7 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> ApiResult {
 
         let mut length = 0usize;
 
-        let mut format: Option<ImageFormat> = None;
+        // let mut determined_format = false;
 
         while let Some(chunk) = field.next().await {
             let chunk = chunk.unwrap();
@@ -188,23 +194,40 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> ApiResult {
                 break;
             }
             f.write_all(&chunk).unwrap();
-            if format.is_none() {
-                format = Some(image::guess_format(file_head).map_err(img_error)?);
-                match format {
-                    Some(image::ImageFormat::Png) => {
-                        extension = Some("png".to_string());
-                    }
-                    Some(image::ImageFormat::Jpeg) => {
-                        extension = Some("jpg".to_string());
-                    }
-                    _ => {
-                        save_result = Err(io::Error::new(
-                            io::ErrorKind::InvalidData,
-                            "Invalid file format. Must be JPEG or PNG.",
-                        ));
-                        break;
+            if mime_type.as_ref().map(|a| a.type_().as_str()) == Some("image") {
+                if extension.is_none() {
+                    let format = Some(image::guess_format(file_head).map_err(img_error)?);
+                    match format {
+                        Some(ImageFormat::Png) => {
+                            extension = Some("png".to_string());
+                        }
+                        Some(ImageFormat::Jpeg) => {
+                            extension = Some("jpg".to_string());
+                        }
+                        _ => {
+                            save_result = Err(io::Error::new(
+                                io::ErrorKind::InvalidData,
+                                "Invalid file format. Must be JPEG or PNG.",
+                            ));
+                            break;
+                        }
                     }
                 }
+            } else {
+                // get extension from the filename
+                let mime_type = mime_type.as_ref().expect("mime_type is None");
+                extension = Path::new(&filename)
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(|ext| ext.to_string())
+                    .or_else(|| {
+                        mime_guess::get_mime_extensions(&mime_type)
+                            .and_then(|ext| ext.first().map(|ext| ext.to_string()))
+                    });
+
+                debug!("extension: {:?}", &extension);
+
+                break;
             }
         }
     }
@@ -214,10 +237,13 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> ApiResult {
             if let Some(tmp_filepath) = tmp_filepath {
                 let hash = move_by_hash(&tmp_filepath)?;
 
+                let mime_type = mime_type.map(|a| a.essence_str().to_owned());
+
                 Ok(HttpResponse::Ok().json(json!({
                     "nonce": nonce,
                     "sha1": hash,
                     "extension": extension.unwrap_or("jpg".to_string()),
+                    "mime_type": mime_type.unwrap_or("application/octet-stream".to_string()),
                     "dindex": dir_index
                 })))
             } else {

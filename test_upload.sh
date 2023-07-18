@@ -4,6 +4,12 @@
 
 . ./.env
 
+if [ -z "$1" ]
+then
+    echo "Usage: $0 <filename>"
+    exit 1
+fi
+
 timestamp=$(date +%s)
 export NONCE=$((timestamp / 30))
 
@@ -20,5 +26,5 @@ curl -X POST http://localhost:8080/image \
     -H "X-Signature: $SIGNATURE" \
     -H "X-Nonce: $NONCE" \
     -H "X-Dir-Index: 2" \
-    -F file=@./IMG_9211.jpg
+    -F file=@./$1
 
