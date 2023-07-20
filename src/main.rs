@@ -359,7 +359,9 @@ async fn main() -> Result<()> {
                 .wrap(cors)
                 .wrap(middleware::Logger::default())
                 .route("/get_nonce", web::get().to(get_nonce))
+                // @deprecated: `/image` is deprecated, use `/upload` instead
                 .route("/image", web::post().to(save_file))
+                .route("/upload", web::post().to(save_file))
         })
         .bind(bind)?
         .run()
@@ -369,7 +371,9 @@ async fn main() -> Result<()> {
             App::new()
                 .wrap(middleware::Logger::default())
                 .route("/get_nonce", web::get().to(get_nonce))
+                // @deprecated: `/image` is deprecated, use `/upload` instead
                 .route("/image", web::post().to(save_file))
+                .route("/upload", web::post().to(save_file))
         })
         .bind(bind)?
         .run()

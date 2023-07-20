@@ -45,6 +45,9 @@ The response contains the following fields:
 
 - `nonce` is the nonce used to sign the signature, sent by client in X-Nonce header.
 - `sha1` is the SHA1 hash of the uploaded image.
+- `extension` is the extension of the uploaded image.
+- `mime_type` is the MIME type of the uploaded image.
+- `dindex` is the index of the output directory where the image is saved.
 
 ## Example
 
@@ -66,7 +69,10 @@ Content-Type: application/json
 
 {
   "nonce": "56250429",
-  "sha1": "e1586b201c06a2d440358378f15d6a7987ee4ab6"
+  "sha1": "e1586b201c06a2d440358378f15d6a7987ee4ab6",
+  "extension": "jpg",
+  "mime_type": "image/jpeg",
+  "dindex": null
 }
 ```
 
@@ -103,3 +109,5 @@ Rantang is licensed under the MIT License. See the `LICENSE` file for more infor
 ## Contributions
 
 Contributions to Rantang are welcomed. Please open an issue or submit a pull request.
+
+[] Robin Syihab
