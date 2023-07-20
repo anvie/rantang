@@ -1,8 +1,8 @@
 Rantang
 ===============
 
-Rantang is a simple file uploader server with signature verification. This software allows an authenticated user to upload images to the server with a digital signature, 
-so we can upload directly from the browser to the any server without having to go through the main server for authentication.
+Rantang is a simple file uploader server with signature verification. This program lets an authenticated user to upload files to the stateless server with a digital signature, 
+allowing them to upload directly from their browser to the any server without having to go through the main server for authentication.
 
 Built with Rust and Actix Web for enhanced performance and safety.
 
