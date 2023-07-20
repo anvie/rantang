@@ -46,7 +46,9 @@ jobs:
       run: ssh-keyscan -p ${{ secrets.SSH_PORT}} -H ${{ secrets.SSH_HOST }}  >> ~/.ssh/known_hosts
 
     - name: Deploy with rsync
-      run: rsync -avzrhcP --chown www:www -e 'ssh -vv' ./target/release/rantang ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${{ env.BIN_OUTPUT }}
+      run: |
+        ls -al ./target/release
+        rsync -avzrhcP -e 'ssh -v' ./target/release/rantang ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${{ env.BIN_OUTPUT }}
 
     - name: Add marker for restart by systemd
       uses: appleboy/ssh-action@master
