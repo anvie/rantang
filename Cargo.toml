@@ -23,4 +23,5 @@ sha1 = "0.10.5"
 hex = "0.4.3"
 anyhow = "1.0.71"
 mime_guess = "2.0.4"
+clap = { version = "4.3.17", features = ["derive"] }
 

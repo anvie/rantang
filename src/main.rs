@@ -14,16 +14,13 @@ use actix_error::ErrorBadRequest;
 /// OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
 /// BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
 /// OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-/// Project Rantang
-///
-/// Author: Robin Syihab <r@nu.id>
 ///
 use actix_multipart::Multipart;
 use actix_web::{
     error as actix_error, middleware, web, App, HttpRequest, HttpResponse, HttpServer,
 };
 use anyhow::Result;
+use clap::Parser;
 use dotenvy::dotenv;
 use error::{to_str_err, ApiResult, MyError};
 use futures::{StreamExt, TryStreamExt};
@@ -300,12 +297,29 @@ async fn get_nonce() -> ApiResult {
     Ok(HttpResponse::Ok().body(a_nonce.to_string()))
 }
 
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Sets the port to listen to.
+    #[arg(short, long, default_value = "8008")]
+    port: u16,
+
+    /// Sets the host to listen to.
+    #[arg(long, default_value = "127.0.0.1")]
+    listen: String,
+}
+
 #[actix_web::main]
 async fn main() -> Result<()> {
     dotenv().expect(".env not found.");
     env_logger::init();
 
-    println!("Welcome to Rantang version {}", env!("CARGO_PKG_VERSION"));
+    println!(
+        "\nWelcome to Rantang version {}\n",
+        env!("CARGO_PKG_VERSION")
+    );
+
+    let args = Args::parse();
 
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
 
@@ -331,6 +345,9 @@ async fn main() -> Result<()> {
     let cors_allow_all =
         env::var("CORS_ALLOW_ALL").ok().as_ref().map(|a| a.as_str()) == Some("true");
 
+    let bind = format!("{}:{}", args.listen, args.port);
+    println!("Listening on {}", bind);
+
     if cors_allow_all {
         debug!("CORS_ALLOW_ALL is set to true. Allowing all origins.");
         HttpServer::new(|| {
@@ -344,7 +361,7 @@ async fn main() -> Result<()> {
                 .route("/get_nonce", web::get().to(get_nonce))
                 .route("/image", web::post().to(save_file))
         })
-        .bind("127.0.0.1:8080")?
+        .bind(bind)?
         .run()
         .await?;
     } else {
@@ -354,7 +371,7 @@ async fn main() -> Result<()> {
                 .route("/get_nonce", web::get().to(get_nonce))
                 .route("/image", web::post().to(save_file))
         })
-        .bind("127.0.0.1:8080")?
+        .bind(bind)?
         .run()
         .await?;
     }
