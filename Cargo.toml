@@ -1,7 +1,7 @@
 [package]
 name = "rantang"
-version = "0.0.15"
-authors = ["Robin Syihab <r@nu.id>"]
+version = "0.0.16"
+authors = ["Robin Syihab <@anvie>"]
 edition = "2018"
 
 [dependencies]

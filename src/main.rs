@@ -1,5 +1,3 @@
-use actix_cors::Cors;
-use actix_error::ErrorBadRequest;
 /// MIT License
 ///
 /// Copyright (c) 2023 Robin Syihab <r@nu.id>
@@ -15,6 +13,8 @@ use actix_error::ErrorBadRequest;
 /// BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
 /// OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ///
+use actix_cors::Cors;
+use actix_error::ErrorBadRequest;
 use actix_multipart::Multipart;
 use actix_web::{
     error as actix_error, middleware, web, App, HttpRequest, HttpResponse, HttpServer,
@@ -164,7 +164,16 @@ async fn save_file(req: HttpRequest, mut payload: Multipart) -> ApiResult {
 
         let filename = filename.to_owned();
 
-        mime_type = Some(mime_guess::from_path(&filename).first_or_octet_stream());
+        if filename == "blob" {
+            // get from header Content-type
+            let content_type = field.content_type().map(|m| m.essence_str()).unwrap_or_else(|| "image/jpg");
+            debug!("content_type: {}", content_type);
+            debug!("content_type.essence_str(): {}", content_type);
+            mime_type = content_type.parse().ok();
+        }else{
+            mime_type = Some(mime_guess::from_path(&filename).first_or_octet_stream());
+        }
+
         debug!("mime_type: {:?}", mime_type);
 
         let a_nonce = nonce::nonce();
